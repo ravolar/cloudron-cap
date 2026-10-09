@@ -77,7 +77,6 @@ RESEND_FROM_DOMAIN=""
 # Empty means ANYONE can sign up and upload recordings - set this before going public.
 CAP_ALLOWED_SIGNUP_DOMAINS=""
 
-# CAP_BLOCKED_SIGNUP_DOMAINS=""
 # CAP_VIDEOS_DEFAULT_PUBLIC="true"
 
 # --- Optional integrations ------------------------------------------------------------------

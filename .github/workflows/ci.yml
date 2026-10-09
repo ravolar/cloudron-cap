@@ -1,5 +1,5 @@
-# Build the image (with its build-time checks) for every pull request and push to main, and
-# lint the shell, Python and JSON files. Nothing is pushed to a registry here.
+# Lint, build the image (with its build-time checks) and run the smoke test for every pull request
+# and push to main. Nothing is published here; releases go through "Update Cap" (update.yml).
 name: CI
 
 on:
@@ -19,10 +19,9 @@ jobs:
 
       - name: Lint
         run: |
-          bash -n start.sh
-          bash -n app-env.sh
-          shellcheck -S warning start.sh app-env.sh
-          python3 -m py_compile prune-workflows.py
+          bash -n start.sh app-env.sh test/smoke.sh
+          shellcheck -S warning start.sh app-env.sh test/smoke.sh
+          python3 -c "import ast; ast.parse(open('prune-workflows.py').read())"
           jq empty CloudronManifest.json CloudronVersions.json
 
       - name: Set up Docker Buildx
@@ -33,4 +32,8 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
-          push: false
+          load: true
+          tags: cloudron-cap:ci
+
+      - name: Smoke test
+        run: test/smoke.sh cloudron-cap:ci

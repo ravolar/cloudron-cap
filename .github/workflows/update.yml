@@ -1,0 +1,169 @@
+# One-button update: Actions -> "Update Cap" -> Run workflow.
+#
+# 1. Checks whether Cap published new images under `latest` (Cap has no version tags).
+# 2. If so (or if "release package changes" is ticked), pins the new digests, bumps the package
+#    version, writes the CHANGELOG entry and builds the image with its build-time checks.
+# 3. Runs test/smoke.sh: the image the way Cloudron runs it, with MySQL 8.4 and a MinIO bucket.
+# 4. Only if that passes: pushes the image to GHCR, adds the version to CloudronVersions.json as
+#    published, commits and tags. Installations then see the update in Cloudron (Updates tab).
+name: Update Cap
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_package_changes:
+        description: "Release even if Cap's images are unchanged (changes to this package on main)"
+        type: boolean
+        default: false
+      notes:
+        description: "CHANGELOG line for package changes (optional)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Resolve Cap's current images
+        id: upstream
+        run: |
+          digest() {
+            local repo=$1 token
+            token=$(curl -fsS "https://ghcr.io/token?scope=repository:capsoftware/${repo}:pull" | jq -r .token)
+            curl -fsSI -H "Authorization: Bearer ${token}" \
+              -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json" \
+              "https://ghcr.io/v2/capsoftware/${repo}/manifests/latest" \
+              | tr -d '\r' | awk -F': ' 'tolower($1)=="docker-content-digest"{print $2}'
+          }
+          web=$(digest cap-web); media=$(digest cap-media-server)
+          [[ "$web" == sha256:* && "$media" == sha256:* ]] || { echo "could not resolve Cap's image digests" >&2; exit 1; }
+          echo "web=${web}" >> "$GITHUB_OUTPUT"
+          echo "media=${media}" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether to release
+        id: plan
+        env:
+          WEB: ${{ steps.upstream.outputs.web }}
+          MEDIA: ${{ steps.upstream.outputs.media }}
+          FORCE: ${{ inputs.release_package_changes }}
+        run: |
+          sed -i -E "s#(cap-web:latest@)sha256:[0-9a-f]+#\1${WEB}#; s#(cap-media-server:latest@)sha256:[0-9a-f]+#\1${MEDIA}#" Dockerfile
+          if git diff --quiet Dockerfile; then upstream=false; else upstream=true; fi
+          echo "upstream=${upstream}" >> "$GITHUB_OUTPUT"
+          if [[ "${upstream}" == false && "${FORCE}" != true ]]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "### Cap is up to date" >> "$GITHUB_STEP_SUMMARY"
+            echo "No new Cap images since the last release; nothing to do." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump version and write the CHANGELOG entry
+        id: version
+        if: steps.plan.outputs.release == 'true'
+        env:
+          WEB: ${{ steps.upstream.outputs.web }}
+          MEDIA: ${{ steps.upstream.outputs.media }}
+          UPSTREAM_CHANGED: ${{ steps.plan.outputs.upstream }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          old=$(jq -r .version CloudronManifest.json)
+          new=$(echo "$old" | awk -F. '{print $1"."$2"."$3+1}')
+          cap_version=$(docker run --rm --entrypoint cat "ghcr.io/capsoftware/cap-web@${WEB}" /app/apps/web/package.json | jq -r .version)
+          [[ -n "${cap_version}" && "${cap_version}" != null ]] || { echo "could not read Cap's version" >&2; exit 1; }
+          jq --arg v "$new" --arg u "$cap_version" '.version = $v | .upstreamVersion = $u' CloudronManifest.json > m.json
+          mv m.json CloudronManifest.json
+          {
+            echo
+            echo "[${new}]"
+            if [[ "${UPSTREAM_CHANGED}" == true ]]; then
+              echo "* Update Cap to ${cap_version} (cap-web ${WEB:7:12}, cap-media-server ${MEDIA:7:12})"
+            fi
+            if [[ -n "${NOTES}" ]]; then printf '* %s\n' "${NOTES}"; fi
+            if [[ "${UPSTREAM_CHANGED}" != true && -z "${NOTES}" ]]; then echo "* Package maintenance release"; fi
+          } >> CHANGELOG
+          echo "version=${new}" >> "$GITHUB_OUTPUT"
+          echo "cap=${cap_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Lint
+        if: steps.plan.outputs.release == 'true'
+        run: |
+          bash -n start.sh app-env.sh test/smoke.sh
+          shellcheck -S warning start.sh app-env.sh test/smoke.sh
+          python3 -c "import ast; ast.parse(open('prune-workflows.py').read())"
+          jq empty CloudronManifest.json CloudronVersions.json
+
+      - name: Set up Docker Buildx
+        if: steps.plan.outputs.release == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image (runs the build-time checks)
+        if: steps.plan.outputs.release == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: cloudron-cap:candidate
+
+      - name: Smoke test
+        if: steps.plan.outputs.release == 'true'
+        run: test/smoke.sh cloudron-cap:candidate
+
+      - name: Log in to GHCR
+        if: steps.plan.outputs.release == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        id: push
+        if: steps.plan.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker tag cloudron-cap:candidate "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:${VERSION}"
+          ref=$(docker inspect --format '{{index .RepoDigests 0}}' "${IMAGE}:${VERSION}")
+          [[ "${ref}" == "${IMAGE}@sha256:"* ]] || { echo "unexpected pushed reference ${ref}" >&2; exit 1; }
+          echo "ref=${ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the version, commit and tag
+        if: steps.plan.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CAP: ${{ steps.version.outputs.cap }}
+          REF: ${{ steps.push.outputs.ref }}
+        run: |
+          npm install --global cloudron@9.0.3
+          cloudron versions add --image "${REF}" --state published
+          cloudron versions verify
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Dockerfile CloudronManifest.json CHANGELOG CloudronVersions.json
+          git commit -m "Release ${VERSION} (Cap ${CAP})"
+          git tag -a "v${VERSION}" -m "Cap for Cloudron ${VERSION}"
+          git push origin main "v${VERSION}"
+          {
+            echo "### Released ${VERSION} (Cap ${CAP})"
+            echo "Image: \`${REF}\`"
+            echo
+            echo "Update the app from the Cloudron dashboard: app → Updates."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -7,3 +7,4 @@ CloudronVersions.json
 logo.png
 __pycache__
 .gitignore
+test

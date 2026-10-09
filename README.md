@@ -195,10 +195,11 @@ Found existing S3 bucket
 
 ### Updates
 
-Versions are published in `CloudronVersions.json`. A new version first appears as **testing**:
-Cloudron shows it as an "unstable" update that can only be applied by hand. After it has been
-tested it is **published**, and installs with automatic updates pick it up. On critical servers
-keep automatic updates off and update by hand. Cloudron backs up the app before every update.
+New versions are published to `CloudronVersions.json` only after an automated smoke test of the
+exact image (see [Development and releasing](#development-and-releasing)). Cloudron then offers
+the update in the app's **Updates** view; it backs up the app before updating, so a bad update
+can be rolled back from **Backups**. On servers with critical apps, keep automatic updates off and
+apply updates by hand.
 
 ### Backups and restore
 
@@ -286,6 +287,7 @@ carried back.
 | `prune-workflows.py` | The daily cleanup task. |
 | `CloudronManifest.json` | Cloudron manifest (addons: localstorage, mysql, scheduler). |
 | `CloudronVersions.json` | The published versions feed that Cloudron reads. |
+| `test/smoke.sh` | Smoke test of a built image (used by CI and by the release workflow). |
 
 ## Development and releasing
 
@@ -296,23 +298,33 @@ cloudron install --location cap.example.com
 cloudron logs -f --app cap.example.com
 ```
 
+`test/smoke.sh <image>` runs an image the way Cloudron does (read-only root filesystem, data and
+runtime volumes) next to MySQL 8.4 and a MinIO bucket, and checks start-up, migrations, storage
+access, the media server, the guard proxy's blocks, file ownership and a restart. It needs only
+Docker and curl.
+
 | Workflow | When | What |
 |---|---|---|
-| `ci.yml` | every PR and push to main | lint, full image build with the build-time checks |
-| `upstream-watch.yml` | weekly, or by hand | if Cap's `latest` images changed: bump digests, patch version and CHANGELOG, build, open a PR |
-| `release.yml` | tag `vX.Y.Z` | build and push `ghcr.io/ravolar/cloudron-cap:X.Y.Z`, add it to `CloudronVersions.json` as **testing** |
-| `promote.yml` | by hand | mark the tested version **published** |
+| `ci.yml` | every PR and push to main | lint, image build with the build-time checks, smoke test |
+| `update.yml` (**Update Cap**) | by hand | the release button, below |
 
-1. Merge the change (or the upstream-watch PR) with the bumped `version` in
-   `CloudronManifest.json`, an `[X.Y.Z]` entry in `CHANGELOG` and, if Cap's version changed,
-   `upstreamVersion`.
-2. Push the tag `vX.Y.Z`; the release workflow publishes the image and a *testing* entry.
-3. Update a test server to the new version and test it.
-4. Run **Promote** with `X.Y.Z`. To withdraw a version, mark it revoked with
-   `cloudron versions revoke`.
+**Releasing** is one button: Actions → **Update Cap** → Run workflow. It
 
-Repository settings needed once: Actions → General → Workflow permissions **Read and write**
-and **Allow GitHub Actions to create and approve pull requests**; make the GHCR package public.
+1. checks whether Cap published new images (Cap only publishes `latest`, so digests are compared)
+   and stops if nothing changed, unless *release package changes* is ticked (then add a CHANGELOG
+   line in *notes*);
+2. pins the new digests, bumps the patch version, sets `upstreamVersion` from Cap's own
+   `package.json`, writes the CHANGELOG entry;
+3. builds the image and runs the smoke test;
+4. only if everything passes, pushes `ghcr.io/ravolar/cloudron-cap:X.Y.Z`, adds it to
+   `CloudronVersions.json` as published, commits and tags `vX.Y.Z`.
+
+To withdraw a published version, mark it revoked (`cloudron versions revoke --version X.Y.Z`, or
+set its `publishState` to `revoked`) and commit `CloudronVersions.json`. Installations already
+on that version keep it; new installs and updates skip it.
+
+Repository settings needed once: Actions → General → Workflow permissions **Read and write**; the
+GHCR package must be public.
 
 ## License
 
