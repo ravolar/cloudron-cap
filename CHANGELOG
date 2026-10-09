@@ -1,0 +1,37 @@
+[0.1.0]
+* Initial package: Cap web + media server from the official images, Cloudron MySQL, external S3 storage
+* Media server bound to 127.0.0.1 and run in production mode
+* Writable Next.js build dir (runtimeDirs) and workflow state in /app/data
+* env.sh: syntax check before use, AssemblyAI/AI provider settings, concurrency knob
+* env.sh may only contain plain NAME="value" lines (it is read as root)
+* One video transcode at a time by default; warning when sign-up is open to anyone
+* Daily cleanup of finished video-processing job state older than WORKFLOW_RETENTION_DAYS (30)
+* Guard proxy in front of Cap: blocks custom S3 storage (SSRF to the Cloudron network), internal cron/workflow endpoints, and rate-limits OG images, the image optimizer, the Loom downloader and docs AI
+
+[0.1.1]
+* README: describe the guard proxy process layout; community-app install verified
+
+[0.1.2]
+* Guard proxy: also catch no-JS server-action forms that use $ACTION_REF_ / JSON ids (incl. escaped ids); refuse action forms it cannot parse
+* secrets.env is validated like env.sh and owned by root; Windows (CRLF) line endings are rejected with a clear error
+* Image optimizer rate limit raised to 2000/min per IP (offices behind one NAT)
+* Process stop timeouts fit Cloudron's 10 s grace period; clearer startup errors (MySQL wait, env file rules)
+* README: rehearsed migration procedure, backups, rollback
+
+[0.1.3]
+* env file validator: only space and tab count as blanks (vertical tab / form feed allowed command execution as root), whitespace required before a trailing comment, control characters rejected
+* Guard proxy: inspect form posts on every path (Next routing is case-sensitive, so /API/x is a page), match only $ACTION_ fields, deliver the 413 response before dropping oversized uploads
+* Stop timeouts add up to less than Cloudron's 10 s grace period (supervisor stops programs sequentially)
+
+[0.1.4]
+* env.sh is no longer loaded by the root start script: settings such as NODE_OPTIONS, LD_PRELOAD or PATH could otherwise run code as root. A wrapper (app-env.sh) loads it as the app user right before each Cap process starts
+
+[0.1.5]
+* Root no longer acts on anything the app user could rename or replace: /app/data is root-owned (the app only writes workflow-data), env.sh is root-owned and read-only for the app, /run/cap is recreated root-owned on every start, symlinks in place of the package's files are refused
+* secrets.env is read as text (three known names) instead of being sourced; cap.env is written to a temporary file and moved into place
+
+[0.1.6]
+* Cleanup task runs Python isolated (-I), so app-writable paths can't inject modules into it
+* Startup no longer aborts if the nightly cleanup removes files while ownership is being fixed
+* Secrets parsing keeps a "#" inside quoted values
+* README: scratch disk usage, which old settings to carry over in a migration

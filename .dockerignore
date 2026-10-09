@@ -1,0 +1,9 @@
+.git
+.github
+*.md
+CHANGELOG
+CloudronManifest.json
+CloudronVersions.json
+logo.png
+__pycache__
+.gitignore

@@ -1,0 +1,85 @@
+# Weekly check for new upstream Cap images. Cap only publishes `latest`, so the digests behind it
+# are compared with the ones pinned in the Dockerfile. On a change, a pull request bumps both
+# digests, the package patch version and the CHANGELOG. Nothing is released until the PR is
+# reviewed, merged and tagged (see release.yml).
+name: Upstream watch
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve upstream digests
+        id: digests
+        run: |
+          digest() {
+            local repo=$1 token
+            token=$(curl -fsS "https://ghcr.io/token?scope=repository:capsoftware/${repo}:pull" | jq -r .token)
+            curl -fsSI -H "Authorization: Bearer ${token}" \
+              -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json" \
+              "https://ghcr.io/v2/capsoftware/${repo}/manifests/latest" \
+              | tr -d '\r' | awk -F': ' 'tolower($1)=="docker-content-digest"{print $2}'
+          }
+          web=$(digest cap-web); media=$(digest cap-media-server)
+          [[ "$web" == sha256:* && "$media" == sha256:* ]] || { echo "could not resolve digests" >&2; exit 1; }
+          echo "web=${web}" >> "$GITHUB_OUTPUT"
+          echo "media=${media}" >> "$GITHUB_OUTPUT"
+
+      - name: Update Dockerfile, version and CHANGELOG
+        id: bump
+        env:
+          WEB: ${{ steps.digests.outputs.web }}
+          MEDIA: ${{ steps.digests.outputs.media }}
+        run: |
+          sed -i -E "s#(cap-web:latest@)sha256:[0-9a-f]+#\1${WEB}#; s#(cap-media-server:latest@)sha256:[0-9a-f]+#\1${MEDIA}#" Dockerfile
+          if git diff --quiet Dockerfile; then
+            echo "Upstream images unchanged"; echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          old=$(jq -r .version CloudronManifest.json)
+          new=$(echo "$old" | awk -F. '{print $1"."$2"."$3+1}')
+          jq --arg v "$new" '.version = $v' CloudronManifest.json > m.json && mv m.json CloudronManifest.json
+          { echo; echo "[${new}]"; echo "* Update Cap images (cap-web ${WEB:7:12}, cap-media-server ${MEDIA:7:12})"; } >> CHANGELOG
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "version=${new}" >> "$GITHUB_OUTPUT"
+
+      # Pull requests opened with GITHUB_TOKEN don't trigger other workflows, so CI can't
+      # check them; build here instead, and only open the PR if the build-time checks pass.
+      - name: Set up Docker Buildx
+        if: steps.bump.outputs.changed == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image with the new digests
+        if: steps.bump.outputs.changed == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+
+      - name: Open pull request
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          branch="upstream/${VERSION}"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "Branch $branch already exists"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git commit -am "Update Cap images (package ${VERSION})"
+          git push origin "$branch"
+          gh pr create --title "Update Cap images (package ${VERSION})" --body \
+            "New upstream Cap images were published under \`latest\`. Check the [Cap releases](https://github.com/CapSoftware/Cap/releases), update \`upstreamVersion\` in CloudronManifest.json if Cap's version changed, test the image on a test server, then merge and tag \`v${VERSION}\`."

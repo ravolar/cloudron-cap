@@ -1,0 +1,50 @@
+# Promote the latest version in CloudronVersions.json from "testing" to "published", so that
+# installations with automatic updates enabled pick it up. Run it by hand (Actions -> Promote -> Run
+# workflow) after the version has been tested on a test server.
+name: Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to promote (must be the manifest version on main)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Check version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$(jq -r .version CloudronManifest.json)" == "${VERSION}" ]] || { echo "main manifest is not at ${VERSION}" >&2; exit 1; }
+          [[ "$(jq -r --arg v "${VERSION}" '.versions[$v].publishState' CloudronVersions.json)" == "testing" ]] || { echo "${VERSION} is not in testing state" >&2; exit 1; }
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Promote
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          npm install --global cloudron@9.0.3
+          # `versions update` targets the manifest version (checked above) and insists on an image;
+          # pass the one already recorded for this version so only the state changes.
+          image=$(jq -r --arg v "${VERSION}" '.versions[$v].manifest.dockerImage' CloudronVersions.json)
+          [[ "${image}" == ghcr.io/*@sha256:* ]] || { echo "no pinned image recorded for ${VERSION}" >&2; exit 1; }
+          cloudron versions update --image "${image}" --state published
+          cloudron versions verify
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CloudronVersions.json
+          git commit -m "Publish ${VERSION}"
+          git push origin main

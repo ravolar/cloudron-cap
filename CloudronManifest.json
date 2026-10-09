@@ -1,0 +1,44 @@
+{
+  "manifestVersion": 2,
+  "id": "io.github.ravolar.cap",
+  "title": "Cap",
+  "tagline": "Open source screen recording and sharing, a Loom alternative",
+  "description": "file://DESCRIPTION.md",
+  "changelog": "file://CHANGELOG",
+  "postInstallMessage": "file://POSTINSTALL.md",
+  "version": "0.1.6",
+  "upstreamVersion": "0.3.1",
+  "website": "https://cap.so",
+  "documentationUrl": "https://cap.so/docs/self-hosting",
+  "packagerName": "ravolar",
+  "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+  "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+  "icon": "file://logo.png",
+  "mediaLinks": [
+    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+  ],
+  "tags": [
+    "video",
+    "screen-recording",
+    "collaboration",
+    "loom"
+  ],
+  "httpPort": 3000,
+  "healthCheckPath": "/api/status",
+  "memoryLimit": 3221225472,
+  "runtimeDirs": [
+    "/app/code/web/apps/web/.next"
+  ],
+  "addons": {
+    "localstorage": {},
+    "mysql": {},
+    "scheduler": {
+      "prune-workflows": {
+        "schedule": "23 4 * * *",
+        "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+      }
+    }
+  },
+  "minBoxVersion": "10.0.0",
+  "packageUrl": "https://github.com/ravolar/cloudron-cap"
+}

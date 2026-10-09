@@ -1,0 +1,355 @@
+{
+    "stable": true,
+    "versions": {
+        "0.1.0": {
+            "manifest": {
+                "manifestVersion": 2,
+                "id": "io.github.ravolar.cap",
+                "title": "Cap",
+                "tagline": "Open source screen recording and sharing, a Loom alternative",
+                "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
+                "changelog": "* Initial package: Cap web + media server from the official images, Cloudron MySQL, external S3 storage\n* Media server bound to 127.0.0.1 and run in production mode\n* Writable Next.js build dir (runtimeDirs) and workflow state in /app/data\n* env.sh: syntax check before use, AssemblyAI/AI provider settings, concurrency knob\n* env.sh may only contain plain NAME=\"value\" lines (it is read as root)\n* One video transcode at a time by default; warning when sign-up is open to anyone\n* Daily cleanup of finished video-processing job state older than WORKFLOW_RETENTION_DAYS (30)\n* Guard proxy in front of Cap: blocks custom S3 storage (SSRF to the Cloudron network), internal cron/workflow endpoints, and rate-limits OG images, the image optimizer, the Loom downloader and docs AI\n",
+                "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app \u2192 Resources); video transcoding uses ffmpeg.\n",
+                "version": "0.1.0",
+                "upstreamVersion": "0.3.1",
+                "website": "https://cap.so",
+                "documentationUrl": "https://cap.so/docs/self-hosting",
+                "packagerName": "ravolar",
+                "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+                "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+                "icon": "file://logo.png",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+                ],
+                "tags": [
+                    "video",
+                    "screen-recording",
+                    "collaboration",
+                    "loom"
+                ],
+                "httpPort": 3000,
+                "healthCheckPath": "/api/status",
+                "memoryLimit": 3221225472,
+                "runtimeDirs": [
+                    "/app/code/web/apps/web/.next"
+                ],
+                "addons": {
+                    "localstorage": {},
+                    "mysql": {},
+                    "scheduler": {
+                        "prune-workflows": {
+                            "schedule": "23 4 * * *",
+                            "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+                        }
+                    }
+                },
+                "minBoxVersion": "10.0.0",
+                "packageUrl": "https://github.com/ravolar/cloudron-cap",
+                "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:6150309fad7bd7613bae8db02ad24bbbe8c13ddfd750c60cceb5e9ffd8c04e1a"
+            },
+            "creationDate": "Fri, 09 Oct 2026 11:37:02 GMT",
+            "ts": "Fri, 09 Oct 2026 11:37:02 GMT",
+            "publishState": "revoked"
+        },
+        "0.1.1": {
+            "manifest": {
+                "manifestVersion": 2,
+                "id": "io.github.ravolar.cap",
+                "title": "Cap",
+                "tagline": "Open source screen recording and sharing, a Loom alternative",
+                "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
+                "changelog": "* README: describe the guard proxy process layout; community-app install verified\n",
+                "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app \u2192 Resources); video transcoding uses ffmpeg.\n",
+                "version": "0.1.1",
+                "upstreamVersion": "0.3.1",
+                "website": "https://cap.so",
+                "documentationUrl": "https://cap.so/docs/self-hosting",
+                "packagerName": "ravolar",
+                "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+                "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+                "icon": "file://logo.png",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+                ],
+                "tags": [
+                    "video",
+                    "screen-recording",
+                    "collaboration",
+                    "loom"
+                ],
+                "httpPort": 3000,
+                "healthCheckPath": "/api/status",
+                "memoryLimit": 3221225472,
+                "runtimeDirs": [
+                    "/app/code/web/apps/web/.next"
+                ],
+                "addons": {
+                    "localstorage": {},
+                    "mysql": {},
+                    "scheduler": {
+                        "prune-workflows": {
+                            "schedule": "23 4 * * *",
+                            "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+                        }
+                    }
+                },
+                "minBoxVersion": "10.0.0",
+                "packageUrl": "https://github.com/ravolar/cloudron-cap",
+                "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:6aca367e4d2dd22c20eaca9dde0e70ce7ed6b1e9a12589e8a3e451f8d9565671"
+            },
+            "creationDate": "Fri, 09 Oct 2026 11:47:39 GMT",
+            "ts": "Fri, 09 Oct 2026 11:55:32 GMT",
+            "publishState": "revoked"
+        },
+        "0.1.2": {
+            "manifest": {
+                "manifestVersion": 2,
+                "id": "io.github.ravolar.cap",
+                "title": "Cap",
+                "tagline": "Open source screen recording and sharing, a Loom alternative",
+                "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
+                "changelog": "* Guard proxy: also catch no-JS server-action forms that use $ACTION_REF_ / JSON ids (incl. escaped ids); refuse action forms it cannot parse\n* secrets.env is validated like env.sh and owned by root; Windows (CRLF) line endings are rejected with a clear error\n* Image optimizer rate limit raised to 2000/min per IP (offices behind one NAT)\n* Process stop timeouts fit Cloudron's 10 s grace period; clearer startup errors (MySQL wait, env file rules)\n* README: rehearsed migration procedure, backups, rollback\n",
+                "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app \u2192 Resources); video transcoding uses ffmpeg.\n",
+                "version": "0.1.2",
+                "upstreamVersion": "0.3.1",
+                "website": "https://cap.so",
+                "documentationUrl": "https://cap.so/docs/self-hosting",
+                "packagerName": "ravolar",
+                "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+                "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+                "icon": "file://logo.png",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+                ],
+                "tags": [
+                    "video",
+                    "screen-recording",
+                    "collaboration",
+                    "loom"
+                ],
+                "httpPort": 3000,
+                "healthCheckPath": "/api/status",
+                "memoryLimit": 3221225472,
+                "runtimeDirs": [
+                    "/app/code/web/apps/web/.next"
+                ],
+                "addons": {
+                    "localstorage": {},
+                    "mysql": {},
+                    "scheduler": {
+                        "prune-workflows": {
+                            "schedule": "23 4 * * *",
+                            "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+                        }
+                    }
+                },
+                "minBoxVersion": "10.0.0",
+                "packageUrl": "https://github.com/ravolar/cloudron-cap",
+                "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:20242a9c674d9daea90bba1b16441824a647688221e99511181a53a4a64d71af"
+            },
+            "creationDate": "Fri, 09 Oct 2026 12:33:56 GMT",
+            "ts": "Fri, 09 Oct 2026 12:40:12 GMT",
+            "publishState": "revoked"
+        },
+        "0.1.3": {
+            "manifest": {
+                "manifestVersion": 2,
+                "id": "io.github.ravolar.cap",
+                "title": "Cap",
+                "tagline": "Open source screen recording and sharing, a Loom alternative",
+                "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
+                "changelog": "* env file validator: only space and tab count as blanks (vertical tab / form feed allowed command execution as root), whitespace required before a trailing comment, control characters rejected\n* Guard proxy: inspect form posts on every path (Next routing is case-sensitive, so /API/x is a page), match only $ACTION_ fields, deliver the 413 response before dropping oversized uploads\n* Stop timeouts add up to less than Cloudron's 10 s grace period (supervisor stops programs sequentially)\n",
+                "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app \u2192 Resources); video transcoding uses ffmpeg.\n",
+                "version": "0.1.3",
+                "upstreamVersion": "0.3.1",
+                "website": "https://cap.so",
+                "documentationUrl": "https://cap.so/docs/self-hosting",
+                "packagerName": "ravolar",
+                "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+                "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+                "icon": "file://logo.png",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+                ],
+                "tags": [
+                    "video",
+                    "screen-recording",
+                    "collaboration",
+                    "loom"
+                ],
+                "httpPort": 3000,
+                "healthCheckPath": "/api/status",
+                "memoryLimit": 3221225472,
+                "runtimeDirs": [
+                    "/app/code/web/apps/web/.next"
+                ],
+                "addons": {
+                    "localstorage": {},
+                    "mysql": {},
+                    "scheduler": {
+                        "prune-workflows": {
+                            "schedule": "23 4 * * *",
+                            "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+                        }
+                    }
+                },
+                "minBoxVersion": "10.0.0",
+                "packageUrl": "https://github.com/ravolar/cloudron-cap",
+                "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:3fc844ec23ef01d485b5f88fbccf52ea78ab00c50d3290efeff7e388f39febf9"
+            },
+            "creationDate": "Fri, 09 Oct 2026 13:01:57 GMT",
+            "ts": "Fri, 09 Oct 2026 13:10:18 GMT",
+            "publishState": "revoked"
+        },
+        "0.1.4": {
+            "manifest": {
+                "manifestVersion": 2,
+                "id": "io.github.ravolar.cap",
+                "title": "Cap",
+                "tagline": "Open source screen recording and sharing, a Loom alternative",
+                "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
+                "changelog": "* env.sh is no longer loaded by the root start script: settings such as NODE_OPTIONS, LD_PRELOAD or PATH could otherwise run code as root. A wrapper (app-env.sh) loads it as the app user right before each Cap process starts\n",
+                "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app \u2192 Resources); video transcoding uses ffmpeg.\n",
+                "version": "0.1.4",
+                "upstreamVersion": "0.3.1",
+                "website": "https://cap.so",
+                "documentationUrl": "https://cap.so/docs/self-hosting",
+                "packagerName": "ravolar",
+                "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+                "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+                "icon": "file://logo.png",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+                ],
+                "tags": [
+                    "video",
+                    "screen-recording",
+                    "collaboration",
+                    "loom"
+                ],
+                "httpPort": 3000,
+                "healthCheckPath": "/api/status",
+                "memoryLimit": 3221225472,
+                "runtimeDirs": [
+                    "/app/code/web/apps/web/.next"
+                ],
+                "addons": {
+                    "localstorage": {},
+                    "mysql": {},
+                    "scheduler": {
+                        "prune-workflows": {
+                            "schedule": "23 4 * * *",
+                            "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+                        }
+                    }
+                },
+                "minBoxVersion": "10.0.0",
+                "packageUrl": "https://github.com/ravolar/cloudron-cap",
+                "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:1d22493dae021ae902e1607b6de42165a6dd956235a19b0202d00daf4c01a2ab"
+            },
+            "creationDate": "Fri, 09 Oct 2026 13:30:35 GMT",
+            "ts": "Fri, 09 Oct 2026 13:36:24 GMT",
+            "publishState": "revoked"
+        },
+        "0.1.5": {
+            "manifest": {
+                "manifestVersion": 2,
+                "id": "io.github.ravolar.cap",
+                "title": "Cap",
+                "tagline": "Open source screen recording and sharing, a Loom alternative",
+                "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
+                "changelog": "* Root no longer acts on anything the app user could rename or replace: /app/data is root-owned (the app only writes workflow-data), env.sh is root-owned and read-only for the app, /run/cap is recreated root-owned on every start, symlinks in place of the package's files are refused\n* secrets.env is read as text (three known names) instead of being sourced; cap.env is written to a temporary file and moved into place\n",
+                "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app \u2192 Resources); video transcoding uses ffmpeg.\n",
+                "version": "0.1.5",
+                "upstreamVersion": "0.3.1",
+                "website": "https://cap.so",
+                "documentationUrl": "https://cap.so/docs/self-hosting",
+                "packagerName": "ravolar",
+                "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+                "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+                "icon": "file://logo.png",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+                ],
+                "tags": [
+                    "video",
+                    "screen-recording",
+                    "collaboration",
+                    "loom"
+                ],
+                "httpPort": 3000,
+                "healthCheckPath": "/api/status",
+                "memoryLimit": 3221225472,
+                "runtimeDirs": [
+                    "/app/code/web/apps/web/.next"
+                ],
+                "addons": {
+                    "localstorage": {},
+                    "mysql": {},
+                    "scheduler": {
+                        "prune-workflows": {
+                            "schedule": "23 4 * * *",
+                            "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+                        }
+                    }
+                },
+                "minBoxVersion": "10.0.0",
+                "packageUrl": "https://github.com/ravolar/cloudron-cap",
+                "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:d030ec3a9d016a5602033edd382ae5ee90c2df54ffe2cb75c83791a695ce4518"
+            },
+            "creationDate": "Fri, 09 Oct 2026 13:53:24 GMT",
+            "ts": "Fri, 09 Oct 2026 13:58:41 GMT",
+            "publishState": "revoked"
+        },
+        "0.1.6": {
+            "manifest": {
+                "manifestVersion": 2,
+                "id": "io.github.ravolar.cap",
+                "title": "Cap",
+                "tagline": "Open source screen recording and sharing, a Loom alternative",
+                "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
+                "changelog": "* Cleanup task runs Python isolated (-I), so app-writable paths can't inject modules into it\n* Startup no longer aborts if the nightly cleanup removes files while ownership is being fixed\n* Secrets parsing keeps a \"#\" inside quoted values\n* README: scratch disk usage, which old settings to carry over in a migration\n",
+                "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app \u2192 Resources); video transcoding uses ffmpeg.\n",
+                "version": "0.1.6",
+                "upstreamVersion": "0.3.1",
+                "website": "https://cap.so",
+                "documentationUrl": "https://cap.so/docs/self-hosting",
+                "packagerName": "ravolar",
+                "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+                "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+                "icon": "file://logo.png",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+                ],
+                "tags": [
+                    "video",
+                    "screen-recording",
+                    "collaboration",
+                    "loom"
+                ],
+                "httpPort": 3000,
+                "healthCheckPath": "/api/status",
+                "memoryLimit": 3221225472,
+                "runtimeDirs": [
+                    "/app/code/web/apps/web/.next"
+                ],
+                "addons": {
+                    "localstorage": {},
+                    "mysql": {},
+                    "scheduler": {
+                        "prune-workflows": {
+                            "schedule": "23 4 * * *",
+                            "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+                        }
+                    }
+                },
+                "minBoxVersion": "10.0.0",
+                "packageUrl": "https://github.com/ravolar/cloudron-cap",
+                "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:04f1a12b1a875b1a74204abc3494a5e8dd13cb87f1dd3b71b4cf30912f83a50c"
+            },
+            "creationDate": "Fri, 09 Oct 2026 14:16:56 GMT",
+            "ts": "Fri, 09 Oct 2026 14:23:16 GMT",
+            "publishState": "published"
+        }
+    }
+}

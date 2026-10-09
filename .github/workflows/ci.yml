@@ -1,0 +1,36 @@
+# Build the image (with its build-time checks) for every pull request and push to main, and
+# lint the shell, Python and JSON files. Nothing is pushed to a registry here.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore: ["CloudronVersions.json", "*.md"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Lint
+        run: |
+          bash -n start.sh
+          bash -n app-env.sh
+          shellcheck -S warning start.sh app-env.sh
+          python3 -m py_compile prune-workflows.py
+          jq empty CloudronManifest.json CloudronVersions.json
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image (runs the build-time checks)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
