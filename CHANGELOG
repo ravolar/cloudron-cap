@@ -35,3 +35,6 @@
 * Startup no longer aborts if the nightly cleanup removes files while ownership is being fixed
 * Secrets parsing keeps a "#" inside quoted values
 * README: scratch disk usage, which old settings to carry over in a migration
+
+[0.1.7]
+* Remove an unused setting from the env.sh template
