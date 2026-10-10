@@ -19,8 +19,8 @@ jobs:
 
       - name: Lint
         run: |
-          bash -n start.sh app-env.sh test/smoke.sh
-          shellcheck -S warning start.sh app-env.sh test/smoke.sh
+          bash -n start.sh app-env.sh test/smoke.sh test/upgrade.sh
+          shellcheck -S warning start.sh app-env.sh test/smoke.sh test/upgrade.sh
           python3 -c "import ast; ast.parse(open('prune-workflows.py').read())"
           jq empty CloudronManifest.json CloudronVersions.json
 
@@ -37,3 +37,10 @@ jobs:
 
       - name: Smoke test
         run: test/smoke.sh cloudron-cap:ci
+
+      - name: Upgrade test (last published version with data -> this build)
+        run: |
+          old=$(jq -r '[.versions | to_entries[] | select(.value.publishState == "published")]
+            | sort_by(.key | split(".") | map(tonumber)) | last | .value.manifest.dockerImage // empty' CloudronVersions.json)
+          if [[ -z "${old}" ]]; then echo "no published version yet; skipping"; exit 0; fi
+          test/upgrade.sh "${old}" cloudron-cap:ci

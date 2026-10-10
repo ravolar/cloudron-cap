@@ -195,9 +195,11 @@ Found existing S3 bucket
 
 ### Updates
 
-New versions are published to `CloudronVersions.json` only after an automated smoke test of the
-exact image (see [Development and releasing](#development-and-releasing)). Cloudron then offers
-the update in the app's **Updates** view; it backs up the app before updating, so a bad update
+New Cap images are packaged automatically: every 3 hours GitHub Actions checks for new images,
+builds them and publishes a new version to `CloudronVersions.json` only after the smoke test and
+an upgrade test with data have passed for the exact image (see
+[Development and releasing](#development-and-releasing)). Cloudron then offers the update in the
+app's **Updates** view (and installs it by itself only where automatic updates are on); it backs up the app before updating, so a bad update
 can be rolled back from **Backups**. On servers with critical apps, keep automatic updates off and
 apply updates by hand.
 
@@ -298,6 +300,11 @@ cloudron install --location cap.example.com
 cloudron logs -f --app cap.example.com
 ```
 
+`test/upgrade.sh <old image> <new image>` does what a Cloudron update does: it starts the old image,
+adds a user, an organisation and a public video, replaces the container with the new image on the
+same data and database, and checks migrations, the data, the video's share page, secrets and
+settings, the guard proxy and a restart.
+
 `test/smoke.sh <image>` runs an image the way Cloudron does (read-only root filesystem, data and
 runtime volumes) next to MySQL 8.4 and a MinIO bucket, and checks start-up, migrations, storage
 access, the media server, the guard proxy's blocks, file ownership and a restart. It needs only
@@ -305,19 +312,23 @@ Docker and curl.
 
 | Workflow | When | What |
 |---|---|---|
-| `ci.yml` | every PR and push to main | lint, image build with the build-time checks, smoke test |
-| `update.yml` (**Update Cap**) | by hand | the release button, below |
+| `ci.yml` | every PR and push to main | lint, image build with the build-time checks, smoke test, upgrade test from the last published version |
+| `update.yml` (**Update Cap**) | every 3 hours, and by hand | automatic releases, below |
 
-**Releasing** is one button: Actions → **Update Cap** → Run workflow. It
+**Releasing is automatic.** `update.yml` runs every 3 hours (or by hand: Actions → **Update Cap** →
+Run workflow). It
 
 1. checks whether Cap published new images (Cap only publishes `latest`, so digests are compared)
    and stops if nothing changed, unless *release package changes* is ticked (then add a CHANGELOG
    line in *notes*);
 2. pins the new digests, bumps the patch version, sets `upstreamVersion` from Cap's own
    `package.json`, writes the CHANGELOG entry;
-3. builds the image and runs the smoke test;
+3. builds the image and runs the smoke test and the upgrade test from the last published version;
 4. only if everything passes, pushes `ghcr.io/ravolar/cloudron-cap:X.Y.Z`, adds it to
    `CloudronVersions.json` as published, commits and tags `vX.Y.Z`.
+
+If any step fails, nothing is published and the run opens a GitHub issue (or comments on the open
+one); the next scheduled run retries.
 
 To withdraw a published version, mark it revoked (`cloudron versions revoke --version X.Y.Z`, or
 set its `publishState` to `revoked`) and commit `CloudronVersions.json`. Installations already
