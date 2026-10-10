@@ -400,6 +400,56 @@
             "creationDate": "Fri, 09 Oct 2026 16:57:37 GMT",
             "ts": "Fri, 09 Oct 2026 16:57:37 GMT",
             "publishState": "published"
+        },
+        "0.1.8": {
+            "manifest": {
+                "manifestVersion": 2,
+                "id": "io.github.ravolar.cap",
+                "title": "Cap",
+                "tagline": "Open source screen recording and sharing, a Loom alternative",
+                "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
+                "changelog": "* Update Cap to 0.3.1 (cap-web 8ee4cbd3fd87, cap-media-server 2dc90e055447)\n",
+                "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app → Resources); video transcoding uses ffmpeg.\n",
+                "version": "0.1.8",
+                "upstreamVersion": "0.3.1",
+                "website": "https://cap.so",
+                "documentationUrl": "https://cap.so/docs/self-hosting",
+                "packagerName": "ravolar",
+                "packagerUrl": "https://github.com/ravolar/cloudron-cap",
+                "iconUrl": "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png",
+                "icon": "file://logo.png",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/ravolar/cloudron-cap/main/logo.png"
+                ],
+                "tags": [
+                    "video",
+                    "screen-recording",
+                    "collaboration",
+                    "loom"
+                ],
+                "httpPort": 3000,
+                "healthCheckPath": "/api/status",
+                "memoryLimit": 3221225472,
+                "runtimeDirs": [
+                    "/app/code/web/apps/web/.next"
+                ],
+                "addons": {
+                    "localstorage": {},
+                    "mysql": {},
+                    "scheduler": {
+                        "prune-workflows": {
+                            "schedule": "23 4 * * *",
+                            "command": "gosu cloudron:cloudron /app/pkg/prune-workflows.py"
+                        }
+                    }
+                },
+                "minBoxVersion": "10.0.0",
+                "packageUrl": "https://github.com/ravolar/cloudron-cap",
+                "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:2a1e00765a8d2ebd0d5fa58d06f96939832b3ccb42e9156ce42a29dd7bd1f9d0"
+            },
+            "creationDate": "Sat, 10 Oct 2026 13:08:46 GMT",
+            "ts": "Sat, 10 Oct 2026 13:08:46 GMT",
+            "publishState": "published"
         }
     }
 }

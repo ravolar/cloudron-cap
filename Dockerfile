@@ -9,7 +9,7 @@
 #   cap-media-server  oven/bun (Debian), bun + node-av + ffmpeg from apt.
 
 FROM ghcr.io/capsoftware/cap-web:latest@sha256:8ee4cbd3fd87f88f538831aed06c954c525db9c2426a62abeaf0ca307c5e1ce9 AS web
-FROM ghcr.io/capsoftware/cap-media-server:latest@sha256:261ad94d600b9c71d6772b253e3ba056ed90dc81939c22e3b82cf227d7c7492f AS media
+FROM ghcr.io/capsoftware/cap-media-server:latest@sha256:2dc90e055447026d7ff70656344cde74ec91b9d458a6050d9be6040a7074b62b AS media
 
 FROM cloudron/node-base:24-20260920@sha256:d984683ec59bf2379130bf41cf3c2b6bc0453f327297d7183525cb05424e7b34
 

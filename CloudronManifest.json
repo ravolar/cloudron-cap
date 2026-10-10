@@ -6,7 +6,7 @@
   "description": "file://DESCRIPTION.md",
   "changelog": "file://CHANGELOG",
   "postInstallMessage": "file://POSTINSTALL.md",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "upstreamVersion": "0.3.1",
   "website": "https://cap.so",
   "documentationUrl": "https://cap.so/docs/self-hosting",

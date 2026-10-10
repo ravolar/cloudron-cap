@@ -38,3 +38,6 @@
 
 [0.1.7]
 * Remove an unused setting from the env.sh template
+
+[0.1.8]
+* Update Cap to 0.3.1 (cap-web 8ee4cbd3fd87, cap-media-server 2dc90e055447)
