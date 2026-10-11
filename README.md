@@ -337,6 +337,21 @@ on that version keep it; new installs and updates skip it.
 Repository settings needed once: Actions → General → Workflow permissions **Read and write**; the
 GHCR package must be public.
 
+## Support
+
+This is an unofficial package, maintained on a best-effort basis by its author, who runs it in
+production. There is no guaranteed response time and no warranty (see the license).
+
+* **Package problems** (installation, configuration, updates, the package's scripts): open an
+  issue in this repository with the app's version (app → Updates), what you did, and the relevant
+  lines of the app's log (remove personal data and secrets).
+* **Security issues in the package**: please report them privately through GitHub (Security →
+  Report a vulnerability), not in a public issue.
+* **Bugs or features of Cap itself**: report them upstream at <https://github.com/CapSoftware/Cap>. Upstream releases reach
+  this package automatically after the tests described in [Development and releasing](#development-and-releasing).
+* Questions and discussion: the [Cloudron forum](https://forum.cloudron.io)
+  (community apps category).
+
 ## License
 
 Cap is © Cap Software, Inc.; its web app and media server are licensed under the
