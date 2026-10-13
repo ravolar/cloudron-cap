@@ -2,7 +2,8 @@ Cap is an open source alternative to Loom: record your screen and camera, then s
 that plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.
 
 This is an **unofficial community package**, not affiliated with or supported by Cap Software.
-It runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one container.
+It runs Cap's official `cap-web` image unmodified, plus Cap's media server built from the same
+source commit, in one container.
 
 ### What you need
 

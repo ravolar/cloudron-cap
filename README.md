@@ -4,7 +4,8 @@ Unofficial [Cloudron](https://cloudron.io) community package for [Cap](https://c
 source alternative to Loom: record your screen and camera in the browser or the desktop app and
 share a link that plays instantly.
 
-The package runs Cap's official `cap-web` and `cap-media-server` images, unmodified, in one
+The package runs Cap's official `cap-web` image unmodified, plus Cap's media server built from the
+same source commit as that image, in one
 Cloudron app, hardened for servers that host many other apps. It is in production use on
 Cloudron 10.0 and tested on 10.1.
 
@@ -89,7 +90,7 @@ Anything else makes the app refuse to start, with the offending line numbers in 
 | `RESEND_API_KEY` | no | Resend API key (starts with `re_`). |
 | `RESEND_FROM_DOMAIN` | no | A domain verified in Resend, e.g. `example.com` (not the key). |
 | `CAP_ALLOWED_SIGNUP_DOMAINS` | recommended | Comma-separated email domains allowed to sign up. **Empty means anyone can sign up and upload.** |
-| `CAP_VIDEOS_DEFAULT_PUBLIC` | no | Default visibility of new recordings. |
+| `CAP_VIDEOS_DEFAULT_PUBLIC` | no | Default visibility of new recordings. The template of new installations sets `"false"` (private); without the setting Cap makes new recordings public. |
 | `ASSEMBLY_API_KEY` | no | AssemblyAI key for transcriptions. |
 | `AI_PROVIDER`, `AI_MODEL` | no | AI titles and summaries: `groq`, `openai` or `anthropic`, with the matching key below. |
 | `GROQ_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | no | Keys for the AI provider. |
@@ -127,8 +128,11 @@ so:
   Backblaze B2: the web UI's CORS options only allow downloads. Set a custom rule with the B2
   CLI or API (operations `s3_get`, `s3_head`, `s3_put`, `s3_post`; rule names need at least 6
   characters).
-* At startup Cap tries to create the bucket and set a public-read policy. Providers that refuse
-  (e.g. B2) log an error and Cap continues.
+* At startup Cap tries to create the bucket and, if that succeeds, to set a public-read policy on
+  it. Providers that refuse (e.g. B2) log an error and Cap continues. **Create the bucket yourself
+  and give Cap a key limited to that bucket's objects** (read, write, list, multipart uploads),
+  without permission to create buckets or change bucket policies; keep public access to the bucket
+  blocked unless you want it. A healthy app is no proof that the bucket is private.
 * Cloudron backups don't include the bucket, and deleting a recording in Cap may remove its files
   from it. Protect the bucket on the storage side (versioning, replication or backups).
 
@@ -280,7 +284,7 @@ carried back.
 
 | File | Purpose |
 |---|---|
-| `Dockerfile` | Copies the official images onto `cloudron/node-base:24`, pinned by digest (upstream only publishes `latest`), installs ffmpeg, and checks native pieces (sharp, the media server's addon, bun, ffmpeg) and the guard proxy's action lookup at build time. |
+| `Dockerfile` | Copies the official `cap-web` image onto `cloudron/node-base:24`, pinned by digest (upstream only publishes `latest`), and builds the media server from Cap's source at the commit that image was built from (`CAP_SOURCE_SHA`, taken from its signed SLSA provenance; Cap's separately published `cap-media-server:latest` can be months apart from `cap-web`). Installs ffmpeg and checks native pieces (sharp, node-av, bun, ffmpeg) and the guard proxy's action lookup at build time. |
 | `start.sh` | Runs as root: secures directories, writes the `env.sh` template and secrets on first start, validates both files, derives database URL and internal endpoints, waits for MySQL, starts supervisor. Never loads `env.sh`. |
 | `app-env.sh` | Runs as the app user: loads `env.sh`, then the secrets and derived values, and starts one Cap process. |
 | `supervisor/cap.conf` | Three processes: guard proxy (`:3000`), Next.js (`127.0.0.1:3001`), media server (`127.0.0.1:3456`). |
@@ -310,20 +314,26 @@ runtime volumes) next to MySQL 8.4 and a MinIO bucket, and checks start-up, migr
 access, the media server, the guard proxy's blocks, file ownership and a restart. It needs only
 Docker and curl.
 
+`test/media.sh <image>` runs Cap's own media-server test suites (probing, transcoding, audio,
+recording verification, real-world media routes) inside the image, with its ffmpeg and node-av, so
+every release is checked to actually process video on this base image.
+
 | Workflow | When | What |
 |---|---|---|
-| `ci.yml` | every PR and push to main | lint, image build with the build-time checks, smoke test, upgrade test from the last published version |
+| `ci.yml` | every PR and push to main | lint, image build with the build-time checks, smoke test, media tests, upgrade test from the last published version |
 | `update.yml` (**Update Cap**) | every 3 hours, and by hand | automatic releases, below |
 
 **Releasing is automatic.** `update.yml` runs every 3 hours (or by hand: Actions → **Update Cap** →
 Run workflow). It
 
-1. checks whether Cap published new images (Cap only publishes `latest`, so digests are compared)
-   and stops if nothing changed, unless *release package changes* is ticked (then add a CHANGELOG
-   line in *notes*);
-2. pins the new digests, bumps the patch version, sets `upstreamVersion` from Cap's own
-   `package.json`, writes the CHANGELOG entry;
-3. builds the image and runs the smoke test and the upgrade test from the last published version;
+1. checks whether Cap published a new `cap-web` image (Cap only publishes `latest`, so digests are
+   compared) and reads the source commit it was built from out of its SLSA provenance; it stops if
+   nothing changed, unless *release package changes* is ticked (then add a CHANGELOG line in
+   *notes*);
+2. pins the new digest and `CAP_SOURCE_SHA`, bumps the patch version, sets `upstreamVersion` from
+   Cap's own `package.json`, writes the CHANGELOG entry;
+3. builds the image (the media server from that commit) and runs the smoke test, Cap's media tests
+   (`test/media.sh`) and the upgrade test from the last published version;
 4. only if everything passes, pushes `ghcr.io/ravolar/cloudron-cap:X.Y.Z`, adds it to
    `CloudronVersions.json` as published, commits and tags `vX.Y.Z`.
 
@@ -356,6 +366,8 @@ production. There is no guaranteed response time and no warranty (see the licens
 
 Cap is © Cap Software, Inc.; its web app and media server are licensed under the
 [GNU AGPLv3](https://github.com/CapSoftware/Cap/blob/main/LICENSE). This package runs Cap's
-official images unmodified; the source of the Cap version in each release is linked by the
+official `cap-web` image unmodified and builds Cap's media server, unmodified, from the source commit
+recorded as `CAP_SOURCE_SHA` in the `Dockerfile` (and in the image label
+`org.opencontainers.image.revision`); the source of the Cap version in each release is linked by the
 image digests in the `Dockerfile` and available from the
 [Cap repository](https://github.com/CapSoftware/Cap).

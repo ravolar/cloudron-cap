@@ -45,30 +45,40 @@ jobs:
         with:
           ref: main
 
-      - name: Resolve Cap's current images
+      - name: Resolve Cap's current web image and its source commit
         id: upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          digest() {
-            local repo=$1 token
-            token=$(curl -fsS "https://ghcr.io/token?scope=repository:capsoftware/${repo}:pull" | jq -r .token)
-            curl -fsSI -H "Authorization: Bearer ${token}" \
-              -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json" \
-              "https://ghcr.io/v2/capsoftware/${repo}/manifests/latest" \
-              | tr -d '\r' | awk -F': ' 'tolower($1)=="docker-content-digest"{print $2}'
-          }
-          web=$(digest cap-web); media=$(digest cap-media-server)
-          [[ "$web" == sha256:* && "$media" == sha256:* ]] || { echo "could not resolve Cap's image digests" >&2; exit 1; }
+          token=$(curl -fsS "https://ghcr.io/token?scope=repository:capsoftware/cap-web:pull" | jq -r .token)
+          web=$(curl -fsSI -H "Authorization: Bearer ${token}" \
+            -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json" \
+            "https://ghcr.io/v2/capsoftware/cap-web/manifests/latest" \
+            | tr -d '\r' | awk -F': ' 'tolower($1)=="docker-content-digest"{print $2}')
+          [[ "$web" == sha256:* ]] || { echo "could not resolve cap-web's digest" >&2; exit 1; }
+          # The commit the linux/amd64 image was built from, from its SLSA provenance attestation.
+          # The media server is built from this same commit (see Dockerfile).
+          docker buildx imagetools inspect "ghcr.io/capsoftware/cap-web@${web}" --format '{{json .Provenance}}' > provenance.json
+          source=$(jq -r '(.["linux/amd64"] // .) | .SLSA | tostring' provenance.json \
+            | grep -oE '"vcs:revision" *: *"[0-9a-f]{40}"' | grep -oE '[0-9a-f]{40}' | sort -u)
+          repo=$(jq -r '(.["linux/amd64"] // .) | .SLSA | tostring' provenance.json \
+            | grep -oE '"vcs:source" *: *"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/' | sort -u)
+          rm -f provenance.json
+          [[ "${source}" =~ ^[0-9a-f]{40}$ && "${repo}" == "https://github.com/CapSoftware/Cap" ]] || {
+            echo "cap-web has no unique provenance commit from CapSoftware/Cap (got '${source}' from '${repo}')" >&2; exit 1; }
+          # The commit must exist upstream and contain the media server.
+          gh api "repos/CapSoftware/Cap/contents/apps/media-server/package.json?ref=${source}" --jq .name >/dev/null
           echo "web=${web}" >> "$GITHUB_OUTPUT"
-          echo "media=${media}" >> "$GITHUB_OUTPUT"
+          echo "source=${source}" >> "$GITHUB_OUTPUT"
 
       - name: Decide whether to release
         id: plan
         env:
           WEB: ${{ steps.upstream.outputs.web }}
-          MEDIA: ${{ steps.upstream.outputs.media }}
+          SOURCE: ${{ steps.upstream.outputs.source }}
           FORCE: ${{ inputs.release_package_changes }}
         run: |
-          sed -i -E "s#(cap-web:latest@)sha256:[0-9a-f]+#\1${WEB}#; s#(cap-media-server:latest@)sha256:[0-9a-f]+#\1${MEDIA}#" Dockerfile
+          sed -i -E "s#(cap-web:latest@)sha256:[0-9a-f]+#\1${WEB}#; s#^ARG CAP_SOURCE_SHA=[0-9a-f]{40}#ARG CAP_SOURCE_SHA=${SOURCE}#" Dockerfile
           if git diff --quiet Dockerfile; then upstream=false; else upstream=true; fi
           echo "upstream=${upstream}" >> "$GITHUB_OUTPUT"
           if [[ "${upstream}" == false && "${FORCE}" != true ]]; then
@@ -84,7 +94,7 @@ jobs:
         if: steps.plan.outputs.release == 'true'
         env:
           WEB: ${{ steps.upstream.outputs.web }}
-          MEDIA: ${{ steps.upstream.outputs.media }}
+          SOURCE: ${{ steps.upstream.outputs.source }}
           UPSTREAM_CHANGED: ${{ steps.plan.outputs.upstream }}
           NOTES: ${{ inputs.notes }}
         run: |
@@ -98,7 +108,7 @@ jobs:
             echo
             echo "[${new}]"
             if [[ "${UPSTREAM_CHANGED}" == true ]]; then
-              echo "* Update Cap to ${cap_version} (cap-web ${WEB:7:12}, cap-media-server ${MEDIA:7:12})"
+              echo "* Update Cap to ${cap_version} (cap-web ${WEB:7:12}, media server built from the same commit ${SOURCE:0:12})"
             fi
             if [[ -n "${NOTES}" ]]; then printf '* %s\n' "${NOTES}"; fi
             if [[ "${UPSTREAM_CHANGED}" != true && -z "${NOTES}" ]]; then echo "* Package maintenance release"; fi
@@ -109,8 +119,8 @@ jobs:
       - name: Lint
         if: steps.plan.outputs.release == 'true'
         run: |
-          bash -n start.sh app-env.sh test/smoke.sh test/upgrade.sh
-          shellcheck -S warning start.sh app-env.sh test/smoke.sh test/upgrade.sh
+          bash -n start.sh app-env.sh test/smoke.sh test/upgrade.sh test/media.sh
+          shellcheck -S warning start.sh app-env.sh test/smoke.sh test/upgrade.sh test/media.sh
           python3 -c "import ast; ast.parse(open('prune-workflows.py').read())"
           jq empty CloudronManifest.json CloudronVersions.json
 
@@ -130,6 +140,10 @@ jobs:
       - name: Smoke test
         if: steps.plan.outputs.release == 'true'
         run: test/smoke.sh cloudron-cap:candidate
+
+      - name: Media processing tests (upstream's, in the candidate image)
+        if: steps.plan.outputs.release == 'true'
+        run: test/media.sh cloudron-cap:candidate
 
       - name: Upgrade test (last published version with data -> candidate)
         if: steps.plan.outputs.release == 'true'

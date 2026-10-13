@@ -72,11 +72,13 @@ start_app() {
 
 wait_ready() {
     for _ in $(seq 1 90); do
+        # Logs are captured first: `docker logs | grep -q` under pipefail fails at random (SIGPIPE).
+        logs=$(docker logs "${ID}-app" 2>&1)
         if curl -fs -o /dev/null "http://127.0.0.1:${PORT}/api/status" &&
-            docker logs "${ID}-app" 2>&1 | grep -q "Migrations run successfully"; then
+            grep -q "Migrations run successfully" <<<"${logs}"; then
             return 0
         fi
-        if docker logs "${ID}-app" 2>&1 | grep -qE "MIGRATION_FAILED|Refusing to start|==> ERROR"; then
+        if grep -qE "MIGRATION_FAILED|Refusing to start|==> ERROR" <<<"${logs}"; then
             return 1
         fi
         sleep 2

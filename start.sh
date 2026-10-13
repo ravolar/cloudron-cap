@@ -77,7 +77,9 @@ RESEND_FROM_DOMAIN=""
 # Empty means ANYONE can sign up and upload recordings - set this before going public.
 CAP_ALLOWED_SIGNUP_DOMAINS=""
 
-# CAP_VIDEOS_DEFAULT_PUBLIC="true"
+# Visibility of new recordings. New installations default to private (shared by link only after the
+# owner makes a recording public); Cap's own default is public.
+CAP_VIDEOS_DEFAULT_PUBLIC="false"
 
 # --- Optional integrations ------------------------------------------------------------------
 # ASSEMBLY_API_KEY=""        # transcriptions (AssemblyAI; this Cap build does not read DEEPGRAM_API_KEY)
