@@ -41,3 +41,6 @@
 
 [0.1.8]
 * Update Cap to 0.3.1 (cap-web 8ee4cbd3fd87, cap-media-server 2dc90e055447)
+
+[0.1.9]
+* Release even if Cap’s images are unchanged
