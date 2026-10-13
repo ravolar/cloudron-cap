@@ -458,7 +458,7 @@
                 "title": "Cap",
                 "tagline": "Open source screen recording and sharing, a Loom alternative",
                 "description": "Cap is an open source alternative to Loom: record your screen and camera, then share a link\nthat plays instantly in the browser, with comments, reactions, transcriptions and AI summaries.\n\nThis is an **unofficial community package**, not affiliated with or supported by Cap Software.\nIt runs Cap's official `cap-web` image unmodified, plus Cap's media server built from the same\nsource commit, in one container.\n\n### What you need\n\n* **S3-compatible object storage** for recordings (AWS S3, Cloudflare R2, MinIO, ...). Cloudron\n  has no object-storage addon, so the bucket and its credentials are configured in\n  `/app/data/env.sh`. Recordings are therefore **not** part of Cloudron backups.\n* Optionally a **Resend** account, so Cap can email login links. Cap does not support other\n  mail providers, so the Cloudron mail server can't be used.\n* Free disk space of about three times your largest recording, for transcoding.\n\nThe database (MySQL) is provided by Cloudron and is included in backups.\n",
-                "changelog": "* Release even if Cap’s images are unchanged\n",
+                "changelog": "* Build the media server from the same Cap commit as the web app (c5f22d7, read from cap-web's provenance)\n* Run Cap's own media-server tests in CI and before every release\n* New installations default to private recordings (CAP_VIDEOS_DEFAULT_PUBLIC=\"false\")\n",
                 "postInstallMessage": "Cap needs object storage before it can record anything.\n\n1. Open the **File Manager** of this app and edit `/app/data/env.sh`.\n2. Fill in the `CAP_AWS_*` and `S3_*` settings for your S3-compatible bucket and, optionally,\n   `RESEND_API_KEY` / `RESEND_FROM_DOMAIN` for login emails.\n3. **Restart** the app.\n\n**Before sharing the URL:** set `CAP_ALLOWED_SIGNUP_DOMAINS` in `env.sh`, otherwise anyone can\nsign up and upload recordings. On a server shared with other apps, also give Cap a CPU limit\n(app → Resources); video transcoding uses ffmpeg.\n",
                 "version": "0.1.9",
                 "upstreamVersion": "0.3.1",
@@ -498,7 +498,7 @@
                 "dockerImage": "ghcr.io/ravolar/cloudron-cap@sha256:1c6c43e7b3f236b785347b6b6d5d8e3489d76b1b0e29e749a5620f34f53b072a"
             },
             "creationDate": "Tue, 13 Oct 2026 13:24:19 GMT",
-            "ts": "Tue, 13 Oct 2026 13:24:19 GMT",
+            "ts": "Tue, 13 Oct 2026 14:02:23 GMT",
             "publishState": "published"
         }
     }
