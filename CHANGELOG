@@ -43,4 +43,6 @@
 * Update Cap to 0.3.1 (cap-web 8ee4cbd3fd87, cap-media-server 2dc90e055447)
 
 [0.1.9]
-* Release even if Cap’s images are unchanged
+* Build the media server from the same Cap commit as the web app (c5f22d7, read from cap-web's provenance)
+* Run Cap's own media-server tests in CI and before every release
+* New installations default to private recordings (CAP_VIDEOS_DEFAULT_PUBLIC="false")
