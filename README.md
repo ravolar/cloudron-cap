@@ -11,6 +11,18 @@ Cloudron 10.0 and tested on 10.1.
 
 This project is not affiliated with or supported by Cap Software, Inc.
 
+## Install (no CLI needed)
+
+In your Cloudron dashboard open **App Store → Add custom app → Community app**, paste this URL and
+click **Install**:
+
+```
+https://raw.githubusercontent.com/ravolar/cloudron-cap/main/CloudronVersions.json
+```
+
+New versions then show up in the dashboard (app → **Updates**), like App Store apps. First steps
+after installing: [Installation](#installation).
+
 * [What you get](#what-you-get)
 * [Requirements](#requirements)
 * [Installation](#installation)
@@ -59,7 +71,7 @@ This project is not affiliated with or supported by Cap Software, Inc.
    https://raw.githubusercontent.com/ravolar/cloudron-cap/main/CloudronVersions.json
    ```
 
-   (CLI: `cloudron install --versions-url <url> --location cap.example.com`)
+   (Optional, with the Cloudron CLI instead: `cloudron install --versions-url <url> --location cap.example.com`)
 2. When the app runs, open its **File Manager** and edit `/app/data/env.sh`: object storage,
    Resend and, before anyone else gets the URL, `CAP_ALLOWED_SIGNUP_DOMAINS`.
 3. **Restart** the app and check its log (see [Operations](#operations)).
