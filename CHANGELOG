@@ -46,3 +46,6 @@
 * Build the media server from the same Cap commit as the web app (c5f22d7, read from cap-web's provenance)
 * Run Cap's own media-server tests in CI and before every release
 * New installations default to private recordings (CAP_VIDEOS_DEFAULT_PUBLIC="false")
+
+[0.1.10]
+* Update Cap to 0.3.1 (cap-web e2dbc1e80201, media server built from the same commit fa703687bb16)

@@ -11,9 +11,9 @@
 #                 `latest` image is published independently of cap-web and can be months apart, so
 #                 using it would pair the web app with a different version of its media server.
 
-ARG CAP_SOURCE_SHA=c5f22d7640ebb418e33ba55db732b950a7a4a02a
+ARG CAP_SOURCE_SHA=fa703687bb16d561b9c54ec0e49c745ed2eef921
 
-FROM ghcr.io/capsoftware/cap-web:latest@sha256:8ee4cbd3fd87f88f538831aed06c954c525db9c2426a62abeaf0ca307c5e1ce9 AS web
+FROM ghcr.io/capsoftware/cap-web:latest@sha256:e2dbc1e802011c46190c8de19ced866ae43b9dfb23946d49203b368a8cd81719 AS web
 
 FROM oven/bun:1.4.0@sha256:5ff609364c049b54eb0ff560ec96319729a972078ef2c755d758f0c6ef89c2d6 AS media
 ARG CAP_SOURCE_SHA
