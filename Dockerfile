@@ -49,9 +49,11 @@ ARG CAP_SOURCE_SHA
 LABEL org.opencontainers.image.revision="${CAP_SOURCE_SHA}"
 
 # Build-time gates: fail here, not on a user's server, if a native piece does not resolve on this base.
-# sharp is resolved the way Next.js does it: from the next package inside the pnpm store.
+# sharp is resolved the way Next.js does it: from the next package (inside the pnpm store in older
+# images, flat in node_modules since cap-web 0.3.1).
 RUN set -eux; \
-    next_dir=$(ls -d /app/code/web/node_modules/.pnpm/next@*/node_modules/next | head -1); \
+    next_dir=$(ls -d /app/code/web/node_modules/.pnpm/next@*/node_modules/next /app/code/web/node_modules/next 2>/dev/null | head -1); \
+    test -n "${next_dir}"; \
     node -e "const s = require(require.resolve('sharp', { paths: [process.argv[1]] })); \
       s({ create: { width: 4, height: 4, channels: 3, background: '#f00' } }).webp().toBuffer() \
         .then(b => console.log('sharp ok, libvips', s.versions.vips, b.length, 'bytes'))" "${next_dir}"; \
