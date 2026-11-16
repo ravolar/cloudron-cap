@@ -20,7 +20,9 @@ ARG CAP_SOURCE_SHA
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-# Only apps/media-server of the monorepo, at exactly CAP_SOURCE_SHA.
+# Only apps/media-server of the monorepo, at exactly CAP_SOURCE_SHA. patches/ (bun patchedDependencies,
+# which bun install needs) and bunfig.toml (the test preload test/media.sh relies on) exist only in
+# newer Cap commits, so they are copied when present.
 WORKDIR /src
 RUN set -eux; \
     git init -q .; \
@@ -31,7 +33,9 @@ RUN set -eux; \
     test "$(git rev-parse HEAD)" = "${CAP_SOURCE_SHA}"; \
     mkdir -p /app; \
     cp apps/media-server/package.json apps/media-server/bun.lock /app/; \
-    cp -a apps/media-server/src /app/src
+    cp -a apps/media-server/src /app/src; \
+    if [ -d apps/media-server/patches ]; then cp -a apps/media-server/patches /app/patches; fi; \
+    if [ -f apps/media-server/bunfig.toml ]; then cp apps/media-server/bunfig.toml /app/; fi
 WORKDIR /app
 RUN bun install --frozen-lockfile --production \
     && bun -e "await import('node-av'); await import('hono'); console.log('media dependencies load')"
@@ -47,6 +51,20 @@ COPY --from=media /app /app/code/media
 COPY --from=media /usr/local/bin/bun /usr/local/bin/bun
 ARG CAP_SOURCE_SHA
 LABEL org.opencontainers.image.revision="${CAP_SOURCE_SHA}"
+
+# cap-web is built on Alpine. Newer cap-web images ship only sharp's musl binaries, while this base
+# is glibc, so the glibc ones are added at exactly the versions the image's sharp declares.
+RUN set -eux; \
+    web_modules=/app/code/web/node_modules; \
+    if [ -f "${web_modules}/sharp/package.json" ] && [ ! -d "${web_modules}/@img/sharp-linux-x64" ]; then \
+        pkgs=$(node -e "const d = require(process.argv[1]).optionalDependencies; \
+          console.log(['@img/sharp-linux-x64', '@img/sharp-libvips-linux-x64'].map(n => n + '@' + d[n]).join(' '))" \
+          "${web_modules}/sharp/package.json"); \
+        npm install --prefix /tmp/sharp-glibc --no-save --no-package-lock --ignore-scripts ${pkgs}; \
+        mkdir -p "${web_modules}/@img"; \
+        cp -a /tmp/sharp-glibc/node_modules/@img/. "${web_modules}/@img/"; \
+        rm -rf /tmp/sharp-glibc /root/.npm; \
+    fi
 
 # Build-time gates: fail here, not on a user's server, if a native piece does not resolve on this base.
 # sharp is resolved the way Next.js does it: from the next package (inside the pnpm store in older
